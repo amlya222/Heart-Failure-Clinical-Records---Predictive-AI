@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heart Failure Clinical Records - Predictive AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto py-8">
+        <h1 class="text-3xl font-bold text-center mb-6 text-blue-700">Heart Failure Clinical Records - Predictive AI</h1>
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">Dataset Summary Statistics</h2>
+            <div id="summary" class="overflow-x-auto">
+                <p class="text-gray-500">Loading summary statistics...</p>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">Predictive Modeling</h2>
+            <form id="predict-form" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-gray-700">Age</label>
+                    <input type="number" step="any" name="age" class="mt-1 block w-full rounded border-gray-300" required>
+                </div>
+                <div>
+                    <label class="block text-gray-700">Anaemia (0=No, 1=Yes)</label>
+                    <input type="number" name="anaemia" min="0" max="1" class="mt-1 block w-full rounded border-gray-300" required>
+                </div>
+                <div>
+                    <label class="block text-gray-700">Creatinine Phosphokinase</label>
+                    <input type="number" step="any" name="creatinine_phosphokinase" class="mt-1 block w-full rounded border-gray-300" required>
+                </div>
+                <div>
+                    <label class="block text-gray-700">Diabetes (0=No, 1=Yes)</label>
+                    <input type="number" name="diabetes" min="0" max="1" class="mt-1 block w-full rounded border-gray-300" required>
+                </div>
+                <div>
+                    <label class="block text-gray-700">Ejection Fraction</label>
+                    <input type="number" step="any" name="ejection_fraction" class="mt-1 block w-full rounded border-gray-300" required>
+                </div>
+                <div>
+                    <label class="block text-gray-700">High Blood Pressure (0=No, 1=Yes)</label>
+                    <input type="number" name="high_blood_pressure" min="0" max="1" class="mt-1 block w-full rounded border-gray-300" required>
+                </div>
+                <div>
+                    <label class="block text-gray-700">Platelets</label>
+                    <input type="number" step="any" name="platelets" class="mt-1 block w-full rounded border-gray-300" required>
+                </div>
+                <div>
+                    <label class="block text-gray-700">Serum Creatinine</label>
+                    <input type="number" step="any" name="serum_creatinine" class="mt-1 block w-full rounded border-gray-300" required>
+                </div>
+                <div>
+                    <label class="block text-gray-700">Serum Sodium</label>
+                    <input type="number" step="any" name="serum_sodium" class="mt-1 block w-full rounded border-gray-300" required>
+                </div>
+                <div>
+                    <label class="block text-gray-700">Sex (0=Female, 1=Male)</label>
+                    <input type="number" name="sex" min="0" max="1" class="mt-1 block w-full rounded border-gray-300" required>
+                </div>
+                <div>
+                    <label class="block text-gray-700">Smoking (0=No, 1=Yes)</label>
+                    <input type="number" name="smoking" min="0" max="1" class="mt-1 block w-full rounded border-gray-300" required>
+                </div>
+                <div>
+                    <label class="block text-gray-700">Time (Follow-up period in days)</label>
+                    <input type="number" step="any" name="time" class="mt-1 block w-full rounded border-gray-300" required>
+                </div>
+                <div class="md:col-span-2">
+                    <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">Predict</button>
+                </div>
+            </form>
+            <div id="predict-result" class="mt-4"></div>
+        </div>
+    </div>
+    <script>
+        async function fetchSummary() {
+            const summaryDiv = document.getElementById('summary');
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/summary');
+                const data = await response.json();
+                let html = '<table class="min-w-full text-sm text-left text-gray-700"><thead><tr><th class="px-2 py-1 border">Statistic</th>';
+                const columns = Object.keys(data);
+                columns.forEach(col => {
+                    html += `<th class=\"px-2 py-1 border\">${col}</th>`;
+                });
+                html += '</tr></thead><tbody>';
+                const stats = Object.keys(data[columns[0]]);
+                stats.forEach(stat => {
+                    html += `<tr><td class=\"px-2 py-1 border font-semibold\">${stat}</td>`;
+                    columns.forEach(col => {
+                        html += `<td class=\"px-2 py-1 border\">${data[col][stat]}</td>`;
+                    });
+                    html += '</tr>';
+                });
+                html += '</tbody></table>';
+                summaryDiv.innerHTML = html;
+            } catch (err) {
+                summaryDiv.innerHTML = '<p class="text-red-500">Failed to load summary statistics.</p>';
+            }
+        }
+        fetchSummary();
+
+        document.getElementById('predict-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+            const data = {};
+            formData.forEach((value, key) => {
+                data[key] = isNaN(value) ? value : Number(value);
+            });
+            const resultDiv = document.getElementById('predict-result');
+            resultDiv.innerHTML = '<p class="text-gray-500">Predicting...</p>';
+            try {
+                const response = await fetch('http://127.0.0.1:5000/api/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (result.error) {
+                    resultDiv.innerHTML = `<p class='text-red-500'>${result.error}</p>`;
+                } else {
+                    resultDiv.innerHTML = `<div class='p-4 bg-green-100 rounded'><p class='text-lg font-semibold'>Prediction: <span class='text-blue-700'>${result.prediction === 1 ? 'Death Event' : 'No Death Event'}</span></p><p class='text-gray-700'>Probability of Death Event: <span class='font-mono'>${(result.probability * 100).toFixed(2)}%</span></p></div>`;
+                }
+            } catch (err) {
+                resultDiv.innerHTML = '<p class="text-red-500">Failed to get prediction.</p>';
+            }
+        });
+    </script>
+</body>
+</html>
